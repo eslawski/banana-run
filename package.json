@@ -1,0 +1,21 @@
+{
+  "name": "banana-run",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/baloo-2": "^5.2.5",
+    "@fontsource/lilita-one": "^5.2.5",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
