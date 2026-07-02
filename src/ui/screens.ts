@@ -42,6 +42,13 @@ export class Screens {
   private toastTimer: number | null = null;
   private comboTimer: number | null = null;
 
+  // Gamepad/keyboard focus: which buttons the d-pad can walk through on the
+  // currently visible screen, in navigation order.
+  private homeFocus: HTMLButtonElement[] = [];
+  private resultsFocus: HTMLButtonElement[] = [];
+  private focusList: HTMLButtonElement[] = [];
+  private focused: HTMLButtonElement | null = null;
+
   constructor(parent: HTMLElement, private cb: ScreenCallbacks, hidSupported: boolean, muted: boolean, flipped: boolean) {
     this.root = document.createElement('div');
     this.root.id = 'ui';
@@ -107,7 +114,11 @@ export class Screens {
     this.home.querySelectorAll<HTMLButtonElement>('.arrow-btn').forEach((btn) => {
       btn.addEventListener('click', () => this.cb.onCharStep(Number(btn.dataset.dir)));
     });
-    this.home.querySelector('.play-btn')!.addEventListener('click', () => this.cb.onPlay());
+    const playBtn = this.home.querySelector<HTMLButtonElement>('.play-btn')!;
+    playBtn.addEventListener('click', () => this.cb.onPlay());
+    // Character choice is on the d-pad left/right, so focus only walks the
+    // vertical stack of buttons.
+    this.homeFocus = [playBtn, this.connectBtn, this.muteBtn, this.flipBtn];
     this.connectBtn.addEventListener('click', () => this.cb.onConnect());
     this.muteBtn.addEventListener('click', () => this.setMuteLabel(this.cb.onMute()));
     this.flipBtn.addEventListener('click', () => this.setFlipLabel(this.cb.onFlip()));
@@ -116,7 +127,7 @@ export class Screens {
 
     const howto = this.home.querySelector('.howto')!;
     if (hidSupported) {
-      howto.innerHTML = `Tilt the controller to steer &nbsp;·&nbsp; Flick it up to jump<br/><span class="howto-alt">(or steer with ⬅ ➡ and jump with SPACE)</span>`;
+      howto.innerHTML = `Tilt the controller to steer &nbsp;·&nbsp; Flick it up to jump<br/><span class="howto-alt">Menus: D-pad to move, ✕ to pick &nbsp;·&nbsp; (or steer with ⬅ ➡ and jump with SPACE)</span>`;
       this.setPadStatus(false, '');
     } else {
       howto.innerHTML = `Steer with ⬅ ➡ &nbsp;·&nbsp; Jump with SPACE<br/><span class="howto-alt">For PS5 controller motion play, open this game in Chrome.</span>`;
@@ -169,8 +180,11 @@ export class Screens {
     this.bestLine = this.results.querySelector('.best-line')!;
     this.resultsTitle = this.results.querySelector('.results-title')!;
     this.confettiBox = this.results.querySelector('.confetti')!;
-    this.results.querySelector('.again-btn')!.addEventListener('click', () => this.cb.onPlayAgain());
-    this.results.querySelector('.home-btn')!.addEventListener('click', () => this.cb.onHome());
+    const againBtn = this.results.querySelector<HTMLButtonElement>('.again-btn')!;
+    const homeBtn = this.results.querySelector<HTMLButtonElement>('.home-btn')!;
+    againBtn.addEventListener('click', () => this.cb.onPlayAgain());
+    homeBtn.addEventListener('click', () => this.cb.onHome());
+    this.resultsFocus = [againBtn, homeBtn];
   }
 
   // ------------------------------------------------------------- controls
@@ -179,6 +193,7 @@ export class Screens {
     this.home.classList.add('visible');
     this.hud.classList.remove('visible');
     this.results.classList.remove('visible');
+    this.setFocusList(this.homeFocus);
   }
 
   showHud(): void {
@@ -186,12 +201,51 @@ export class Screens {
     this.results.classList.remove('visible');
     this.hud.classList.add('visible');
     this.countEl.textContent = '0';
+    this.setFocusList([]);
   }
 
   hideAll(): void {
     this.home.classList.remove('visible');
     this.hud.classList.remove('visible');
     this.results.classList.remove('visible');
+    this.setFocusList([]);
+  }
+
+  // -------------------------------------------------- gamepad focus
+
+  private setFocusList(list: HTMLButtonElement[]): void {
+    this.focusList = list;
+    this.setFocused(this.visibleFocusables()[0] ?? null);
+  }
+
+  /** Buttons can hide (e.g. Connect after pairing), so filter every time. */
+  private visibleFocusables(): HTMLButtonElement[] {
+    return this.focusList.filter((btn) => btn.offsetParent !== null);
+  }
+
+  private setFocused(el: HTMLButtonElement | null): void {
+    if (this.focused === el) return;
+    this.focused?.classList.remove('gp-focus');
+    this.focused = el;
+    el?.classList.add('gp-focus');
+  }
+
+  /** Move d-pad focus by delta through the visible buttons, wrapping. */
+  moveFocus(delta: number): void {
+    const items = this.visibleFocusables();
+    if (items.length === 0) return;
+    const current = this.focused ? items.indexOf(this.focused) : -1;
+    const next = current === -1 ? 0 : (current + delta + items.length) % items.length;
+    this.setFocused(items[next]!);
+  }
+
+  /** Press the focused button (falls back to the first visible one). */
+  activateFocus(): void {
+    const target =
+      this.focused && this.focused.offsetParent !== null
+        ? this.focused
+        : this.visibleFocusables()[0];
+    target?.click();
   }
 
   setCharacter(def: CharacterDef, index: number): void {
@@ -210,6 +264,10 @@ export class Screens {
     this.padStatus.classList.toggle('connected', connected);
     this.padStatus.textContent = connected ? `✓ ${name} ready!` : 'No controller yet';
     this.connectBtn.style.display = connected ? 'none' : '';
+    // If the Connect button was focused when it disappeared, move on.
+    if (this.focused && this.focused.offsetParent === null) {
+      this.setFocused(this.visibleFocusables()[0] ?? null);
+    }
   }
 
   private setMuteLabel(muted: boolean): void {
@@ -259,6 +317,7 @@ export class Screens {
   showResults(score: number, best: number, isRecord: boolean): void {
     this.hud.classList.remove('visible');
     this.results.classList.add('visible');
+    this.setFocusList(this.resultsFocus);
     this.resultsTitle.textContent = isRecord ? 'NEW RECORD!' : "TIME'S UP!";
     this.bestLine.textContent = isRecord ? `Old best: ${best} 🍌` : `Best ever: ${best} 🍌`;
 

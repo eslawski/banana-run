@@ -278,6 +278,18 @@ button {
   padding: 6px 14px;
 }
 
+/* D-pad / arrow-key focus ring for controller menu navigation. */
+.gp-focus {
+  outline: 4px solid var(--cream);
+  outline-offset: 4px;
+  animation: gp-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes gp-pulse {
+  0%, 100% { outline-offset: 3px; outline-color: var(--cream); }
+  50% { outline-offset: 7px; outline-color: var(--banana); }
+}
+
 .pad-status {
   color: var(--cream);
   font-weight: 700;

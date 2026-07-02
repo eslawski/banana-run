@@ -5,6 +5,7 @@ import {
   RUN_DURATION,
   LATERAL_LIMIT,
   LATERAL_SPEED,
+  LATERAL_RESPONSE,
   JUMP_VELOCITY,
   GRAVITY,
 } from './constants';
@@ -76,10 +77,17 @@ export class Player {
     const speed = (BASE_SPEED + (MAX_SPEED - BASE_SPEED) * ramp) * this.def.traits.speed;
     this.d += speed * dt;
 
+    // Proportional approach: sideways speed scales with how far off-target
+    // we are (capped), so the character eases into position instead of
+    // charging at full speed and stopping dead — much easier to line up
+    // with a banana row.
     const targetLat = steer * LATERAL_LIMIT;
-    const maxStep = LATERAL_SPEED * dt;
-    const delta = THREE.MathUtils.clamp(targetLat - this.lateral, -maxStep, maxStep);
-    this.lateral += delta;
+    const latVel = THREE.MathUtils.clamp(
+      (targetLat - this.lateral) * LATERAL_RESPONSE,
+      -LATERAL_SPEED,
+      LATERAL_SPEED
+    );
+    this.lateral += latVel * dt;
     this.bank += (steer - this.bank) * Math.min(1, dt * 8);
 
     if (!this.grounded) {

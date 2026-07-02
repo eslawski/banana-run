@@ -254,7 +254,13 @@ export class Game {
     for (const action of actions) {
       if (action === 'left') this.changeCharacter(this.selected - 1);
       else if (action === 'right') this.changeCharacter(this.selected + 1);
-      else if (action === 'start') return this.startCountdown();
+      else if (action === 'up' || action === 'down') {
+        this.screens.moveFocus(action === 'up' ? -1 : 1);
+        this.audio.uiClick();
+      } else if (action === 'select') this.screens.activateFocus();
+      else if (action === 'start') this.startCountdown();
+      // A button press may have left this screen; stop handling its input.
+      if (this.state !== 'home') return;
     }
 
     for (let i = 0; i < this.podiumRigs.length; i++) {
@@ -374,7 +380,12 @@ export class Game {
 
   private tickResults(dt: number, actions: string[]): void {
     for (const action of actions) {
-      if (action === 'start') return this.startCountdown();
+      if (action === 'left' || action === 'up' || action === 'right' || action === 'down') {
+        this.screens.moveFocus(action === 'left' || action === 'up' ? -1 : 1);
+        this.audio.uiClick();
+      } else if (action === 'select') this.screens.activateFocus();
+      else if (action === 'start') this.startCountdown();
+      if (this.state !== 'results') return;
     }
     const player = this.player!;
     player.celebrate(dt);

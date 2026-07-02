@@ -22,6 +22,8 @@ export interface DualSenseSample {
   cross: boolean;
   dpadLeft: boolean;
   dpadRight: boolean;
+  dpadUp: boolean;
+  dpadDown: boolean;
   options: boolean;
   /** True when this sample includes real IMU data (enhanced mode). */
   hasMotion: boolean;
@@ -167,6 +169,8 @@ export class DualSense {
       cross: (btn0 & 0x20) !== 0,
       dpadLeft: dpad === 5 || dpad === 6 || dpad === 7,
       dpadRight: dpad === 1 || dpad === 2 || dpad === 3,
+      dpadUp: dpad === 7 || dpad === 0 || dpad === 1,
+      dpadDown: dpad === 3 || dpad === 4 || dpad === 5,
       options: (btn1 & 0x20) !== 0,
       hasMotion,
       timestamp: performance.now(),
@@ -189,6 +193,8 @@ export class DualSense {
       cross: (btn0 & 0x20) !== 0,
       dpadLeft: dpad === 5 || dpad === 6 || dpad === 7,
       dpadRight: dpad === 1 || dpad === 2 || dpad === 3,
+      dpadUp: dpad === 7 || dpad === 0 || dpad === 1,
+      dpadDown: dpad === 3 || dpad === 4 || dpad === 5,
       options: (d.getUint8(5) & 0x20) !== 0,
       hasMotion: false,
       timestamp: performance.now(),

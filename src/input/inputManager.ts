@@ -1,7 +1,7 @@
 import { DualSense, webHidSupported } from './dualsense';
 import { MotionMapper } from './motion';
 
-export type UiAction = 'left' | 'right' | 'start';
+export type UiAction = 'left' | 'right' | 'up' | 'down' | 'select' | 'start';
 
 // Merges DualSense motion controls with the keyboard fallback into one
 // steering value, a jump queue, and menu navigation events.
@@ -16,6 +16,8 @@ export class InputManager {
   private prevCross = false;
   private prevDpadLeft = false;
   private prevDpadRight = false;
+  private prevDpadUp = false;
+  private prevDpadDown = false;
   private prevOptions = false;
   private stickX = 0;
 
@@ -29,10 +31,18 @@ export class InputManager {
       if (ev.repeat) return;
       this.keys.add(ev.code);
       switch (ev.code) {
-        case 'Space':
         case 'ArrowUp':
+          this.uiQueue.push('up');
+          this.jumpQueued = true;
+          ev.preventDefault();
+          break;
+        case 'Space':
         case 'KeyW':
           this.jumpQueued = true;
+          ev.preventDefault();
+          break;
+        case 'ArrowDown':
+          this.uiQueue.push('down');
           ev.preventDefault();
           break;
         case 'ArrowLeft':
@@ -42,7 +52,7 @@ export class InputManager {
           this.uiQueue.push('right');
           break;
         case 'Enter':
-          this.uiQueue.push('start');
+          this.uiQueue.push('select');
           break;
       }
     });
@@ -57,14 +67,18 @@ export class InputManager {
       this.stickX = Math.abs(sample.stick.x) > 0.15 ? sample.stick.x : 0;
       if (sample.cross && !this.prevCross) {
         this.jumpQueued = true;
-        this.uiQueue.push('start');
+        this.uiQueue.push('select');
       }
       if (sample.dpadLeft && !this.prevDpadLeft) this.uiQueue.push('left');
       if (sample.dpadRight && !this.prevDpadRight) this.uiQueue.push('right');
+      if (sample.dpadUp && !this.prevDpadUp) this.uiQueue.push('up');
+      if (sample.dpadDown && !this.prevDpadDown) this.uiQueue.push('down');
       if (sample.options && !this.prevOptions) this.uiQueue.push('start');
       this.prevCross = sample.cross;
       this.prevDpadLeft = sample.dpadLeft;
       this.prevDpadRight = sample.dpadRight;
+      this.prevDpadUp = sample.dpadUp;
+      this.prevDpadDown = sample.dpadDown;
       this.prevOptions = sample.options;
     };
   }
