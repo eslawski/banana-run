@@ -24,6 +24,7 @@ export class Player {
   y = 0;
   vy = 0;
   grounded = true;
+  private latVel = 0;
   private runPhase = 0;
   private squash = 0; // landing squash timer
   private bank = 0;
@@ -57,6 +58,7 @@ export class Player {
     this.y = 0;
     this.vy = 0;
     this.grounded = true;
+    this.latVel = 0;
     this.runPhase = 0;
     this.squash = 0;
     this.bank = 0;
@@ -80,15 +82,24 @@ export class Player {
     // Proportional approach: sideways speed scales with how far off-target
     // we are (capped), so the character eases into position instead of
     // charging at full speed and stopping dead — much easier to line up
-    // with a banana row.
-    const targetLat = steer * LATERAL_LIMIT;
-    const latVel = THREE.MathUtils.clamp(
-      (targetLat - this.lateral) * LATERAL_RESPONSE,
-      -LATERAL_SPEED,
-      LATERAL_SPEED
+    // with a banana row. Steering only works on the ground: a jump keeps
+    // whatever sideways momentum it launched with until landing.
+    if (this.grounded) {
+      const targetLat = steer * LATERAL_LIMIT;
+      this.latVel = THREE.MathUtils.clamp(
+        (targetLat - this.lateral) * LATERAL_RESPONSE,
+        -LATERAL_SPEED,
+        LATERAL_SPEED
+      );
+    }
+    this.lateral = THREE.MathUtils.clamp(
+      this.lateral + this.latVel * dt,
+      -LATERAL_LIMIT,
+      LATERAL_LIMIT
     );
-    this.lateral += latVel * dt;
-    this.bank += (steer - this.bank) * Math.min(1, dt * 8);
+    // Bank with the steer input on the ground, with the actual drift in air.
+    const bankTarget = this.grounded ? steer : this.latVel / LATERAL_SPEED;
+    this.bank += (bankTarget - this.bank) * Math.min(1, dt * 8);
 
     if (!this.grounded) {
       this.vy += GRAVITY * this.def.traits.gravity * dt;
